@@ -1,0 +1,6 @@
+doghouse_early_left 100 100 50 25
+stack_early_right 200 100 50 25
+
+doghouse_early_left 400 100 50 0
+stack_early_right 500 100 50 0
+

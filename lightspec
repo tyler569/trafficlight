@@ -1,0 +1,44 @@
+simple_gyr 50
+0  __g
+20 _y_
+25 r__
+
+flashing_amber 2
+0 ___
+1 _y_
+
+flashing_red 2
+0 r__
+1 ___
+
+doghouse_early_left 50
+0  _:_<g;_g
+5  _:<y_;_g
+8  _:__;_g
+20 _:__;y_
+25 r:__;__
+45 r:_<g;__
+
+stack_early_left 50
+0  __g<g
+5  __g<y
+8  __g_
+20 _y__
+25 r___
+45 r__<g
+
+doghouse_early_right 50
+0  _:_g;_>g
+5  _:_g;>y_
+8  _:_g;__
+20 _:y_;__
+25 r:__;__
+45 r:__;_>g
+
+stack_early_right 50
+0  __g>g
+5  __g>y
+8  __g_
+20 _y__
+25 r___
+45 r__>g

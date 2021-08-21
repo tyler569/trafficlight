@@ -6,6 +6,8 @@
 bool done = false;
 
 void render_frame(cairo_t *cr, int frame);
+void load_light_specs(void);
+void load_draw_instructions(void);
 
 long nanosecond_now() {
     struct timespec now;
@@ -21,7 +23,10 @@ long max(long a, long b) {
     return a > b ? a : b;
 }
 
-int main(int argc, char **argv) {
+int main([[maybe_unused]] int argc, [[maybe_unused]] char **argv) {
+    load_light_specs();
+    load_draw_instructions();
+
     SDL_Init(SDL_INIT_VIDEO);
 
     SDL_Window *window = SDL_CreateWindow(
@@ -270,7 +275,6 @@ void light(cairo_t *cr, int x, int y, int size, const char *colors) {
     int n = 0;
     int original_x = x;
     for (const char *c = colors; *c; c++) {
-        int color;
         switch (*c) {
         case ':':
             if (doghouse_top)
@@ -298,7 +302,7 @@ void light(cairo_t *cr, int x, int y, int size, const char *colors) {
     n = 0;
     x = original_x;
     for (const char *c = colors; *c; c++) {
-        int color;
+        int color = 0;
         switch (*c) {
         case 'r': 
             color = COLOR_RED;
@@ -360,10 +364,11 @@ struct light_desc {
 void print_light_desc(struct light_desc *desc) {
     printf("light_desc {\n\t.loop_time = %i,\n\t.stages = {\n", desc->loop_time);
     for (struct light_stage *stage = desc->stages; stage->state[0]; stage++) {
-        printf("\t\t{ .time_offset = %i, .state = \"%s\" }\n",
+        printf("\t\t{ .time_offset = %i, .state = \"%s\" },\n",
                 stage->time_offset, stage->state);
     }
-    printf("}");
+    printf("\t}\n");
+    printf("}\n");
 }
 
 
@@ -396,80 +401,130 @@ void light_desc(
     light(cr, x, y, size, current_stage->state);
 }
 
-struct light_desc simple_gyr = {
-    .loop_time = 50,
-    .stages = {
-        {0, "__g"},
-        {20, "_y_"},
-        {25, "r__"},
-        {0, ""},
-    }
+
+struct light_spec {
+    char name[64];
+    int stage_count;
+    struct light_desc *desc;
 };
 
-struct light_desc flashing_amber = {
-    .loop_time = 2,
-    .stages = {
-        {0, "___"},
-        {1, "_y_"},
-        {0, ""},
-    },
-};
-
-struct light_desc flashing_red = {
-    .loop_time = 2,
-    .stages = {
-        {0, "r__"},
-        {1, "___"},
-        {0, ""},
-    },
+struct draw_instruction {
+    int light_id;
+    int x, y;
+    int size;
+    int offset;
 };
 
 
-void render_frame(cairo_t *cr, int frame) {
+struct light_spec *spec_array;
+int spec_count = 0;
+struct draw_instruction *instruction_array;
+int instruction_count = 0;
+
+void render_frame(cairo_t *cr, [[maybe_unused]] int frame) {
     cairo_set_source_rgba(cr, 0.5, 0.5, 0.5, 1.0);
     cairo_rectangle(cr, 0, 0, 640, 480);
     cairo_fill(cr);
 
-#define L1 100, 80, 30
-#define L2 200, 80, 30
-#define L3 300, 80, 30
-
     int ms = millisecond_now();
-    int second = (ms / 1000);
-    int stage = second % 60;
-    if (stage < 10) {
-        light(cr, L1, "__g<g");
-        light(cr, L2, "_:_<g;_g");
-        light(cr, L3, "__g");
-    } else if (stage < 15) {
-        light(cr, L1, "__g<y");
-        light(cr, L2, "_:<y_;_g");
-        light(cr, L3, "__g");
-    } else if (stage < 30) {
-        light(cr, L1, "__g_");
-        light(cr, L2, "_:__;_g");
-        light(cr, L3, "__g");
-    } else if (stage < 35) {
-        light(cr, L1, "_y__");
-        light(cr, L2, "_:__;y_");
-        light(cr, L3, "_y_");
-    } else {
-        light(cr, L1, "r___");
-        light(cr, L2, "r:__;__");
-        light(cr, L3, "r__");
+    int sec = ms / 1000;
+
+    for (int i = 0; i < instruction_count; i++) {
+        struct draw_instruction *instr = &instruction_array[i];
+        struct light_desc *desc = spec_array[instr->light_id].desc;
+        light_desc(cr, instr->x, instr->y, instr->size, desc, instr->offset, sec);
     }
-
-#define L4 400, 80, 30
-#define L5 500, 80, 30
-
-    light_desc(cr, L4, &flashing_amber, 0, second);
-    light_desc(cr, L5, &flashing_red, 0, second);
-    light_desc(cr, 100, 250, 30, &simple_gyr, 0, second);
-    light_desc(cr, 200, 250, 30, &simple_gyr, 25, second);
-
 }
 
-// "r__"
-// "r__<y"
-// "r__<y_"
-// "r:__;_<g"
+
+void load_light_specs() {
+    int spec_id = -1;
+    int stage_id = 0;
+    char a[256], b[256], *end;
+    struct light_desc *desc;
+    FILE *file = fopen("lightspec", "r");
+
+    while (!feof(file)) {
+        fscanf(file, "%s %s", a, b);
+        strtol(a, &end, 10);
+        if (*end) {
+            spec_count++;
+        }
+    }
+
+    spec_array = calloc(spec_count, sizeof(struct light_spec));
+
+    rewind(file);
+    while (!feof(file)) {
+        fscanf(file, "%s %s", a, b);
+        strtol(a, &end, 10);
+        if (*end) {
+            spec_id++;
+        } else {
+            spec_array[spec_id].stage_count++;
+        }
+    }
+
+    rewind(file);
+    spec_id = -1;
+    while (!feof(file)) {
+        fscanf(file, "%s %s", a, b);
+        int time = strtol(a, &end, 10);
+        if (*end) {
+            spec_id++;
+            desc = calloc(1,
+                    sizeof(struct light_desc) +
+                    sizeof(struct light_stage) * (
+                        spec_array[spec_id].stage_count + 1
+                    )
+            );
+            spec_array[spec_id].desc = desc;
+            strcpy(spec_array[spec_id].name, a);
+            desc->loop_time = strtol(b, NULL, 10);
+            stage_id = 0;
+        } else {
+            desc->stages[stage_id].time_offset = time;
+            strcpy(desc->stages[stage_id].state, b);
+            stage_id++;
+        }
+    }
+
+    for (int i = 0; i < spec_count; i++) {
+        print_light_desc(spec_array[i].desc);
+    }
+}
+
+int by_name(const char *name) {
+    for (int i = 0; i < spec_count; i++) {
+        if (strcmp(name, spec_array[i].name) == 0) {
+            return i;
+        }
+    }
+    printf("ERROR: No light specification exists with name '%s'\n", name);
+    exit(1);
+}
+
+void load_draw_instructions() {
+    FILE *file = fopen("lightscene", "r");
+    char light_name[64];
+    int x, y, size, offset;
+    int i = 0;
+
+    while (!feof(file)) {
+        fscanf(file, "%s %i %i %i %i", light_name, &x, &y, &size, &offset);
+        instruction_count++;
+    }
+
+    instruction_array = calloc(instruction_count, sizeof(struct draw_instruction));
+
+    rewind(file);
+    while (!feof(file)) {
+        fscanf(file, "%s %i %i %i %i", light_name, &x, &y, &size, &offset);
+        instruction_array[i].light_id = by_name(light_name);
+        instruction_array[i].x = x;
+        instruction_array[i].y = y;
+        instruction_array[i].size = size;
+        instruction_array[i].offset = offset;
+        i++;
+    }
+}

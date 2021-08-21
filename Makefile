@@ -1,2 +1,2 @@
 trafficlight: trafficlight.c
-	clang trafficlight.c -o trafficlight -lsdl2 -lcairo
+	clang -std=c2x -Wall -Wextra trafficlight.c -o trafficlight -lsdl2 -lcairo
