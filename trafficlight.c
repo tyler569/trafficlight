@@ -165,6 +165,8 @@ enum lamp_type {
     LAMP_FARROW,
     LAMP_HORIZ,
     LAMP_VERT,
+    LAMP_SQUARE,
+    LAMP_DIAMOND,
 };
 
 
@@ -198,89 +200,98 @@ void margin(cairo_t *cr, int x, int y, int size) {
     cairo_fill(cr);
 }
 
+void lamp_left_arrow(cairo_t *cr, double arrow_width, int size) {
+    double dw = arrow_width / 3;
+    cairo_set_line_width(cr, arrow_width);
+    cairo_move_to(cr, -size * 0.1, 0);
+    cairo_line_to(cr, size * 0.3, 0);
+    cairo_stroke(cr);
+    cairo_move_to(cr, -size * 0.3 - dw, dw);
+    cairo_line_to(cr, 0, -size * 0.3);
+    cairo_stroke(cr);
+    cairo_move_to(cr, -size * 0.3 - dw, -dw);
+    cairo_line_to(cr, 0, size * 0.3);
+    cairo_stroke(cr);
+}
+
+void lamp_bar(cairo_t *cr, double bar_width, int size) {
+    cairo_set_line_width(cr, bar_width);
+    cairo_move_to(cr, -size * 0.3, 0);
+    cairo_line_to(cr, size * 0.3, 0);
+    cairo_stroke(cr);
+}
+
 void lamp(cairo_t *cr, int x, int y, int size, enum lamp_color color, enum lamp_type type) {
     cairo_rectangle(cr, x, y, size, size);
     set_color(cr, COLOR_BG);
     cairo_fill(cr);
     double arrow_width = size / 15.0;
-    double line_width = size / 8.0;
-    double dw = arrow_width / 3;
+    double bar_width = size / 8.0;
+
+    cairo_save(cr);
+    cairo_translate(cr, x + size / 2, y + size / 2);
 
     switch (type) {
     case LAMP_FULL:
         set_color(cr, color);
-        cairo_arc(cr, x + size / 2, y + size / 2, size * 0.4, 0, 2 * M_PI);
+        cairo_arc(cr, 0, 0, size * 0.4, 0, 2 * M_PI);
         cairo_fill(cr);
         break;
     case LAMP_LARROW:
         set_color(cr, COLOR_OFF);
-        cairo_arc(cr, x + size / 2, y + size / 2, size * 0.4, 0, 2 * M_PI);
+        cairo_arc(cr, 0, 0, size * 0.4, 0, 2 * M_PI);
         cairo_fill(cr);
-        cairo_set_line_width(cr, arrow_width);
+
         set_color(cr, color);
-        cairo_move_to(cr, x + size * 0.4, y + size / 2);
-        cairo_line_to(cr, x + size * 0.8, y + size / 2);
-        cairo_stroke(cr);
-        cairo_move_to(cr, x + size * 0.2 - dw, y + size / 2 + dw);
-        cairo_line_to(cr, x + size * 0.5, y + size * 0.2);
-        cairo_stroke(cr);
-        cairo_move_to(cr, x + size * 0.2 - dw, y + size / 2 - dw);
-        cairo_line_to(cr, x + size * 0.5, y + size * 0.8);
-        cairo_stroke(cr);
+        lamp_left_arrow(cr, arrow_width, size);
         break;
     case LAMP_RARROW:
         set_color(cr, COLOR_OFF);
-        cairo_arc(cr, x + size / 2, y + size / 2, size * 0.4, 0, 2 * M_PI);
+        cairo_arc(cr, 0, 0, size * 0.4, 0, 2 * M_PI);
         cairo_fill(cr);
-        cairo_set_line_width(cr, arrow_width);
+
         set_color(cr, color);
-        cairo_move_to(cr, x + size * 0.6, y + size / 2);
-        cairo_line_to(cr, x + size * 0.2, y + size / 2);
-        cairo_stroke(cr);
-        cairo_move_to(cr, x + size * 0.8 + dw, y + size / 2 - dw);
-        cairo_line_to(cr, x + size * 0.5, y + size * 0.8);
-        cairo_stroke(cr);
-        cairo_move_to(cr, x + size * 0.8 + dw, y + size / 2 + dw);
-        cairo_line_to(cr, x + size * 0.5, y + size * 0.2);
-        cairo_stroke(cr);
+        cairo_rotate(cr, M_PI);
+        lamp_left_arrow(cr, arrow_width, size);
         break;
     case LAMP_FARROW:
         set_color(cr, COLOR_OFF);
-        cairo_arc(cr, x + size / 2, y + size / 2, size * 0.4, 0, 2 * M_PI);
+        cairo_arc(cr, 0, 0, size * 0.4, 0, 2 * M_PI);
         cairo_fill(cr);
-        cairo_set_line_width(cr, arrow_width);
+
         set_color(cr, color);
-        cairo_move_to(cr, x + size / 2, y + size * 0.4);
-        cairo_line_to(cr, x + size / 2, y + size * 0.8);
-        cairo_stroke(cr);
-        cairo_move_to(cr, x + size / 2 - dw, y + size * 0.2 - dw);
-        cairo_line_to(cr, x + size * 0.8, y + size * 0.5);
-        cairo_stroke(cr);
-        cairo_move_to(cr, x + size / 2 + dw, y + size * 0.2 - dw);
-        cairo_line_to(cr, x + size * 0.2, y + size * 0.5);
-        cairo_stroke(cr);
+        cairo_rotate(cr, M_PI/2);
+        lamp_left_arrow(cr, arrow_width, size);
         break;
     case LAMP_HORIZ:
         set_color(cr, COLOR_OFF);
-        cairo_arc(cr, x + size / 2, y + size / 2, size * 0.4, 0, 2 * M_PI);
+        cairo_arc(cr, 0, 0, size * 0.4, 0, 2 * M_PI);
         cairo_fill(cr);
-        cairo_set_line_width(cr, line_width);
+
         set_color(cr, color);
-        cairo_move_to(cr, x + size * 0.2, y + size / 2);
-        cairo_line_to(cr, x + size * 0.8, y + size / 2);
-        cairo_stroke(cr);
+        lamp_bar(cr, bar_width, size);
         break;
     case LAMP_VERT:
         set_color(cr, COLOR_OFF);
-        cairo_arc(cr, x + size / 2, y + size / 2, size * 0.4, 0, 2 * M_PI);
+        cairo_arc(cr, 0, 0, size * 0.4, 0, 2 * M_PI);
         cairo_fill(cr);
-        cairo_set_line_width(cr, line_width);
+
         set_color(cr, color);
-        cairo_move_to(cr, x + size / 2, y + size * 0.2);
-        cairo_line_to(cr, x + size / 2, y + size * 0.8);
-        cairo_stroke(cr);
+        lamp_bar(cr, bar_width, size);
+        break;
+    case LAMP_SQUARE:
+        set_color(cr, color);
+        cairo_rectangle(cr, -size * 0.4, -size * 0.4, size * 0.8, size * 0.8);
+        cairo_fill(cr);
+        break;
+    case LAMP_DIAMOND:
+        set_color(cr, color);
+        cairo_rotate(cr, M_PI/4);
+        cairo_rectangle(cr, -size * 0.3, -size * 0.3, size * 0.6, size * 0.6);
+        cairo_fill(cr);
         break;
     }
+    cairo_restore(cr);
 }
 
 void light(cairo_t *cr, int x, int y, int size, const char *colors, long time) {
@@ -319,6 +330,8 @@ void light(cairo_t *cr, int x, int y, int size, const char *colors, long time) {
         case '^':
         case '-':
         case '|':
+        case 's':
+        case 'd':
         case 'x':
         case 'X':
             continue;
@@ -391,6 +404,12 @@ void light(cairo_t *cr, int x, int y, int size, const char *colors, long time) {
             continue;
         case '|':
             next_lamp = LAMP_VERT;
+            continue;
+        case 's':
+            next_lamp = LAMP_SQUARE;
+            continue;
+        case 'd':
+            next_lamp = LAMP_DIAMOND;
             continue;
         case 'x':
             next_flash = 1;
@@ -582,6 +601,7 @@ void load_draw_instructions() {
     FILE *file = fopen("lightscene", "r");
     char light_name[64], line[256];
     int x, y, size, offset;
+    int last_x, last_size = 0;
     int i = 0;
 
     while (fgets(line, sizeof(line), file)) {
@@ -599,12 +619,17 @@ void load_draw_instructions() {
         if (sscanf(line, "%s %i %i %i %i", light_name, &x, &y, &size, &offset) != 5) {
             printf("line '%s' is not in a correct format\n", line);
         }
+        if (x == -1) {
+            x = last_x + last_size * 2;
+        }
         instruction_array[i].light_id = by_name(light_name);
         instruction_array[i].x = x;
         instruction_array[i].y = y;
         instruction_array[i].size = size;
         instruction_array[i].offset = offset;
         i++;
+        last_x = x;
+        last_size = size;
     }
 
     printf("instructions = {\n");
