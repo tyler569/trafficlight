@@ -87,7 +87,8 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char **argv) {
 
     int frame = 0;
     long frame_start_ms;
-    long desired_frame_duration = 1000 / 60;
+    int desired_frame_rate = 10;
+    long desired_frame_duration = 1000 / desired_frame_rate;
     bool rctrl = false, lctrl = false;
     while (!done) {
         frame_start_ms = millisecond_now();
@@ -162,6 +163,8 @@ enum lamp_type {
     LAMP_LARROW,
     LAMP_RARROW,
     LAMP_FARROW,
+    LAMP_HORIZ,
+    LAMP_VERT,
 };
 
 
@@ -199,6 +202,9 @@ void lamp(cairo_t *cr, int x, int y, int size, enum lamp_color color, enum lamp_
     cairo_rectangle(cr, x, y, size, size);
     set_color(cr, COLOR_BG);
     cairo_fill(cr);
+    double arrow_width = size / 15.0;
+    double line_width = size / 8.0;
+    double dw = arrow_width / 3;
 
     switch (type) {
     case LAMP_FULL:
@@ -206,14 +212,11 @@ void lamp(cairo_t *cr, int x, int y, int size, enum lamp_color color, enum lamp_
         cairo_arc(cr, x + size / 2, y + size / 2, size * 0.4, 0, 2 * M_PI);
         cairo_fill(cr);
         break;
-    case LAMP_LARROW: {
+    case LAMP_LARROW:
         set_color(cr, COLOR_OFF);
         cairo_arc(cr, x + size / 2, y + size / 2, size * 0.4, 0, 2 * M_PI);
         cairo_fill(cr);
-
-        double width = size / 15.0;
-        double dw = width / 3;
-        cairo_set_line_width(cr, width);
+        cairo_set_line_width(cr, arrow_width);
         set_color(cr, color);
         cairo_move_to(cr, x + size * 0.4, y + size / 2);
         cairo_line_to(cr, x + size * 0.8, y + size / 2);
@@ -225,15 +228,11 @@ void lamp(cairo_t *cr, int x, int y, int size, enum lamp_color color, enum lamp_
         cairo_line_to(cr, x + size * 0.5, y + size * 0.8);
         cairo_stroke(cr);
         break;
-    }
-    case LAMP_RARROW: {
+    case LAMP_RARROW:
         set_color(cr, COLOR_OFF);
         cairo_arc(cr, x + size / 2, y + size / 2, size * 0.4, 0, 2 * M_PI);
         cairo_fill(cr);
-
-        double width = size / 15.0;
-        double dw = width / 3;
-        cairo_set_line_width(cr, width);
+        cairo_set_line_width(cr, arrow_width);
         set_color(cr, color);
         cairo_move_to(cr, x + size * 0.6, y + size / 2);
         cairo_line_to(cr, x + size * 0.2, y + size / 2);
@@ -245,15 +244,11 @@ void lamp(cairo_t *cr, int x, int y, int size, enum lamp_color color, enum lamp_
         cairo_line_to(cr, x + size * 0.5, y + size * 0.2);
         cairo_stroke(cr);
         break;
-    }
-    case LAMP_FARROW: {
+    case LAMP_FARROW:
         set_color(cr, COLOR_OFF);
         cairo_arc(cr, x + size / 2, y + size / 2, size * 0.4, 0, 2 * M_PI);
         cairo_fill(cr);
-
-        double width = size / 15.0;
-        double dw = width / 3;
-        cairo_set_line_width(cr, width);
+        cairo_set_line_width(cr, arrow_width);
         set_color(cr, color);
         cairo_move_to(cr, x + size / 2, y + size * 0.4);
         cairo_line_to(cr, x + size / 2, y + size * 0.8);
@@ -265,15 +260,35 @@ void lamp(cairo_t *cr, int x, int y, int size, enum lamp_color color, enum lamp_
         cairo_line_to(cr, x + size * 0.2, y + size * 0.5);
         cairo_stroke(cr);
         break;
-    }
+    case LAMP_HORIZ:
+        set_color(cr, COLOR_OFF);
+        cairo_arc(cr, x + size / 2, y + size / 2, size * 0.4, 0, 2 * M_PI);
+        cairo_fill(cr);
+        cairo_set_line_width(cr, line_width);
+        set_color(cr, color);
+        cairo_move_to(cr, x + size * 0.2, y + size / 2);
+        cairo_line_to(cr, x + size * 0.8, y + size / 2);
+        cairo_stroke(cr);
+        break;
+    case LAMP_VERT:
+        set_color(cr, COLOR_OFF);
+        cairo_arc(cr, x + size / 2, y + size / 2, size * 0.4, 0, 2 * M_PI);
+        cairo_fill(cr);
+        cairo_set_line_width(cr, line_width);
+        set_color(cr, color);
+        cairo_move_to(cr, x + size / 2, y + size * 0.2);
+        cairo_line_to(cr, x + size / 2, y + size * 0.8);
+        cairo_stroke(cr);
+        break;
     }
 }
 
-void light(cairo_t *cr, int x, int y, int size, const char *colors) {
+void light(cairo_t *cr, int x, int y, int size, const char *colors, long time) {
     int doghouse_top = 0;
     enum lamp_type next_lamp = LAMP_FULL;
     int n = 0;
     int original_x = x;
+    int next_flash = 0;
     for (const char *c = colors; *c; c++) {
         switch (*c) {
         case ':':
@@ -293,6 +308,10 @@ void light(cairo_t *cr, int x, int y, int size, const char *colors) {
         case '<':
         case '>':
         case '^':
+        case '-':
+        case '|':
+        case 'x':
+        case 'X':
             continue;
         }
         margin(cr, x, y + size * n, size);
@@ -340,10 +359,37 @@ void light(cairo_t *cr, int x, int y, int size, const char *colors) {
         case '^':
             next_lamp = LAMP_FARROW;
             continue;
+        case '-':
+            next_lamp = LAMP_HORIZ;
+            continue;
+        case '|':
+            next_lamp = LAMP_VERT;
+            continue;
+        case 'x':
+            next_flash = 1;
+            continue;
+        case 'X':
+            next_flash = 2;
+            continue;
         default:
             printf("WARNING: '%c' is not a known lamp color\n", *c);
         }
-        lamp(cr, x, y + size * n, size, color, next_lamp);
+        switch (next_flash) {
+        case 0:
+            lamp(cr, x, y + size * n, size, color, next_lamp);
+            break;
+        case 1:
+            time % 2 == 0 ?
+                lamp(cr, x, y + size * n, size, color, next_lamp) :
+                lamp(cr, x, y + size * n, size, COLOR_OFF, next_lamp);
+            break;
+        case 2:
+            time % 2 == 1 ?
+                lamp(cr, x, y + size * n, size, color, next_lamp) :
+                lamp(cr, x, y + size * n, size, COLOR_OFF, next_lamp);
+            break;
+        }
+        next_flash = 0;
         next_lamp = LAMP_FULL;
         n++;
     }
@@ -398,7 +444,7 @@ void light_desc(
         long time
     ) {
     struct light_stage *current_stage = stage(desc, offset, time);
-    light(cr, x, y, size, current_stage->state);
+    light(cr, x, y, size, current_stage->state, time);
 }
 
 
@@ -527,4 +573,12 @@ void load_draw_instructions() {
         instruction_array[i].offset = offset;
         i++;
     }
+
+    printf("instructions = {\n");
+    for (int i = 0; i < instruction_count; i++) {
+        struct draw_instruction *instr = &instruction_array[i];
+        printf("\t{ .light_id = %i, .x = %i, .y = %i, .size = %i, .offset = %i },\n",
+                instr->light_id, instr->x, instr->y, instr->size, instr->offset);
+    }
+    printf("}\n");
 }

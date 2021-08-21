@@ -3,13 +3,14 @@ simple_gyr 50
 20 _y_
 25 r__
 
-flashing_amber 2
-0 ___
-1 _y_
+flashing_amber 1
+0 _xy_
 
-flashing_red 2
-0 r__
-1 ___
+flashing_red 1
+0 Xr__
+
+warning 2
+0 xyXy
 
 doghouse_early_left 50
 0  _:_<g;_g
@@ -42,3 +43,18 @@ stack_early_right 50
 20 _y__
 25 r___
 45 r__>g
+
+yellow_left_turn 50
+0  __x<y
+20 _<y_
+25 <r__
+
+fun_times 50
+0  __g_
+20 xy__Xy
+25 _r__
+
+sf_muni 50
+0  _|g
+20 _x|g
+25 -r_

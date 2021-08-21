@@ -1,6 +1,11 @@
-doghouse_early_left 100 100 50 25
-stack_early_right 200 100 50 25
+doghouse_early_left 100 50 50 25
+stack_early_right 200 50 50 25
 
-doghouse_early_left 400 100 50 0
-stack_early_right 500 100 50 0
+doghouse_early_left 400 50 50 0
+stack_early_right 500 50 50 0
 
+yellow_left_turn 300 50 50 0
+
+fun_times 100 250 50 0
+
+sf_muni 200 300 50 0
