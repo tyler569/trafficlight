@@ -1,14 +1,9 @@
-#include <signal.h>
-#include <stdlib.h>
-
 #include <stdbool.h>
 #include <sys/time.h>
 #include <SDL2/SDL.h>
 #include <cairo/cairo.h>
 
-void handle_sigint(int signal) {
-    exit(0);
-}
+bool done = false;
 
 void render_frame(cairo_t *cr, int frame);
 
@@ -27,7 +22,6 @@ long max(long a, long b) {
 }
 
 int main(int argc, char **argv) {
-    signal(SIGINT, handle_sigint);
     SDL_Init(SDL_INIT_VIDEO);
 
     SDL_Window *window = SDL_CreateWindow(
@@ -86,9 +80,7 @@ int main(int argc, char **argv) {
     SDL_Texture *texture;
 
 
-    bool done = false;
     int frame = 0;
-
     long frame_start_ms;
     long desired_frame_duration = 1000 / 60;
     bool rctrl = false, lctrl = false;
@@ -190,6 +182,14 @@ void set_color(cairo_t *cr, enum lamp_color color) {
     }
 }
 
+void margin(cairo_t *cr, int x, int y, int size) {
+    int margin = size * 0.1;
+    size += margin * 2;
+    cairo_rectangle(cr, x - margin, y - margin, size, size);
+    set_color(cr, COLOR_AMBER);
+    cairo_fill(cr);
+}
+
 void lamp(cairo_t *cr, int x, int y, int size, enum lamp_color color, enum lamp_type type) {
     cairo_rectangle(cr, x, y, size, size);
     set_color(cr, COLOR_BG);
@@ -265,10 +265,38 @@ void lamp(cairo_t *cr, int x, int y, int size, enum lamp_color color, enum lamp_
 }
 
 void light(cairo_t *cr, int x, int y, int size, const char *colors) {
-    enum lamp_type next_lamp = LAMP_FULL;
-    int original_x = x;
     int doghouse_top = 0;
+    enum lamp_type next_lamp = LAMP_FULL;
     int n = 0;
+    int original_x = x;
+    for (const char *c = colors; *c; c++) {
+        int color;
+        switch (*c) {
+        case ':':
+            if (doghouse_top)
+                n = doghouse_top;
+            else
+                doghouse_top = n;
+            x = original_x - size / 2;
+            continue;
+        case ';':
+            if (doghouse_top)
+                n = doghouse_top;
+            else
+                doghouse_top = n;
+            x = original_x + size / 2;
+            continue;
+        case '<':
+        case '>':
+        case '^':
+            continue;
+        }
+        margin(cr, x, y + size * n, size);
+        n++;
+    }
+    doghouse_top = 0;
+    n = 0;
+    x = original_x;
     for (const char *c = colors; *c; c++) {
         int color;
         switch (*c) {
@@ -323,57 +351,49 @@ void render_frame(cairo_t *cr, int frame) {
     cairo_rectangle(cr, 0, 0, 640, 480);
     cairo_fill(cr);
 
-#define L1 100, 100, 50
-#define L2 200, 100, 50
-#define L3 300, 100, 50
-#define L4 400, 100, 50
-#define L5 500, 100, 50
-#define L6 100, 300, 50
+#define L1 100, 80, 30
+#define L2 200, 80, 30
+#define L3 300, 80, 30
 
-    switch ((frame / 60) % 6) {
+    int ms = millisecond_now();
+    int second = (ms / 1000);
+    int stage = second % 60;
+    if (stage < 10) {
+        light(cr, L1, "__g<g");
+        light(cr, L2, "_:_<g;_g");
+        light(cr, L3, "__g");
+    } else if (stage < 15) {
+        light(cr, L1, "__g<y");
+        light(cr, L2, "_:<y_;_g");
+        light(cr, L3, "__g");
+    } else if (stage < 30) {
+        light(cr, L1, "__g_");
+        light(cr, L2, "_:__;_g");
+        light(cr, L3, "__g");
+    } else if (stage < 35) {
+        light(cr, L1, "_y__");
+        light(cr, L2, "_:__;y_");
+        light(cr, L3, "_y_");
+    } else {
+        light(cr, L1, "r___");
+        light(cr, L2, "r:__;__");
+        light(cr, L3, "r__");
+    }
+
+#define L4 400, 80, 30
+#define L5 500, 80, 30
+
+    switch (stage % 2) {
     case 0:
-        light(cr, L1, "__g");
-        light(cr, L2, "r__");
-        light(cr, L3, "<r__");
-        light(cr, L4, "_:_<g;_g");
-        light(cr, L6, "__^y");
+        light(cr, L4, "_y_");
+        light(cr, L5, "___");
         break;
     case 1:
-        light(cr, L1, "_y_");
-        light(cr, L2, "r__");
-        light(cr, L3, "__<g");
-        light(cr, L4, "_:<y_;_g");
-        light(cr, L6, "___");
-        break;
-    case 2:
-        light(cr, L1, "r__");
-        light(cr, L2, "r__");
-        light(cr, L3, "_<y_");
-        light(cr, L4, "_:__;_g");
-        light(cr, L6, "__^y");
-        break;
-    case 3:
-        light(cr, L1, "r__");
-        light(cr, L2, "__g");
-        light(cr, L3, "<r__");
-        light(cr, L4, "_:__;y_");
-        light(cr, L6, "___");
-        break;
-    case 4:
-        light(cr, L1, "r__");
-        light(cr, L2, "_y_");
-        light(cr, L3, "<r__");
-        light(cr, L4, "r:__;__");
-        light(cr, L6, "__^y");
-        break;
-    case 5:
-        light(cr, L1, "r__");
-        light(cr, L2, "r__");
-        light(cr, L3, "<r__");
-        light(cr, L4, "r:_<g;__");
-        light(cr, L6, "_^y_");
+        light(cr, L4, "___");
+        light(cr, L5, "r__");
         break;
     }
+
 }
 
 // "r__"
