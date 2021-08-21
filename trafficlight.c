@@ -346,6 +346,85 @@ void light(cairo_t *cr, int x, int y, int size, const char *colors) {
 }
 
 
+struct light_stage {
+    int time_offset;
+    char state[32];
+};
+
+struct light_desc {
+    int loop_time;
+    struct light_stage stages[];
+};
+
+
+void print_light_desc(struct light_desc *desc) {
+    printf("light_desc {\n\t.loop_time = %i,\n\t.stages = {\n", desc->loop_time);
+    for (struct light_stage *stage = desc->stages; stage->state[0]; stage++) {
+        printf("\t\t{ .time_offset = %i, .state = \"%s\" }\n",
+                stage->time_offset, stage->state);
+    }
+    printf("}");
+}
+
+
+struct light_stage *stage(struct light_desc *desc, int offset, long time) {
+    long loop_time = (time + offset) % desc->loop_time;
+    for (struct light_stage *stage = desc->stages; stage->state[0]; stage++) {
+        if (
+                loop_time >= stage[0].time_offset &&
+                ( loop_time < stage[1].time_offset ||
+                  stage[1].time_offset == 0 )
+        ) {
+            return stage;
+        }
+    }
+    printf("WARNING: no valid state found for light at time %i\n", offset);
+    print_light_desc(desc);
+    return &(struct light_stage){ .state = "" };
+}
+
+void light_desc(
+        cairo_t *cr,
+        int x,
+        int y,
+        int size,
+        struct light_desc *desc,
+        int offset,
+        long time
+    ) {
+    struct light_stage *current_stage = stage(desc, offset, time);
+    light(cr, x, y, size, current_stage->state);
+}
+
+struct light_desc simple_gyr = {
+    .loop_time = 50,
+    .stages = {
+        {0, "__g"},
+        {20, "_y_"},
+        {25, "r__"},
+        {0, ""},
+    }
+};
+
+struct light_desc flashing_amber = {
+    .loop_time = 2,
+    .stages = {
+        {0, "___"},
+        {1, "_y_"},
+        {0, ""},
+    },
+};
+
+struct light_desc flashing_red = {
+    .loop_time = 2,
+    .stages = {
+        {0, "r__"},
+        {1, "___"},
+        {0, ""},
+    },
+};
+
+
 void render_frame(cairo_t *cr, int frame) {
     cairo_set_source_rgba(cr, 0.5, 0.5, 0.5, 1.0);
     cairo_rectangle(cr, 0, 0, 640, 480);
@@ -383,16 +462,10 @@ void render_frame(cairo_t *cr, int frame) {
 #define L4 400, 80, 30
 #define L5 500, 80, 30
 
-    switch (stage % 2) {
-    case 0:
-        light(cr, L4, "_y_");
-        light(cr, L5, "___");
-        break;
-    case 1:
-        light(cr, L4, "___");
-        light(cr, L5, "r__");
-        break;
-    }
+    light_desc(cr, L4, &flashing_amber, 0, second);
+    light_desc(cr, L5, &flashing_red, 0, second);
+    light_desc(cr, 100, 250, 30, &simple_gyr, 0, second);
+    light_desc(cr, 200, 250, 30, &simple_gyr, 25, second);
 
 }
 
