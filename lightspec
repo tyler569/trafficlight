@@ -49,12 +49,31 @@ yellow_left_turn 50
 20 _<y_
 25 <r__
 
-fun_times 50
-0  __g_
-20 xy__Xy
-25 _r__
+fun_times 1
+0 xy__Xy
 
 sf_muni 50
 0  _|g
-20 _x|g
+15 _x|g
 25 -r_
+
+british 50
+0  __g
+20 _y_
+25 r__
+45 ry_
+
+super_red 50
+0  :_;_._g
+20 :_;_.y_
+25 :xr;Xr.__
+
+super_yellow 50
+0  _:_;_.g
+15 _:xy;Xy._
+25 r:_;_._
+
+large_red 50
+0  l__g
+20 l_y_
+25 lr__

@@ -284,26 +284,35 @@ void lamp(cairo_t *cr, int x, int y, int size, enum lamp_color color, enum lamp_
 }
 
 void light(cairo_t *cr, int x, int y, int size, const char *colors, long time) {
-    int doghouse_top = 0;
+    int doghouse_top = -1;
     enum lamp_type next_lamp = LAMP_FULL;
     int n = 0;
     int original_x = x;
     int next_flash = 0;
+    bool next_large = false;
+    int large_count = 0;
     for (const char *c = colors; *c; c++) {
         switch (*c) {
         case ':':
-            if (doghouse_top)
+            if (doghouse_top >= 0)
                 n = doghouse_top;
             else
                 doghouse_top = n;
             x = original_x - size / 2;
             continue;
         case ';':
-            if (doghouse_top)
+            if (doghouse_top >= 0)
                 n = doghouse_top;
             else
                 doghouse_top = n;
             x = original_x + size / 2;
+            continue;
+        case '.':
+            x = original_x;
+            doghouse_top = 0;
+            continue;
+        case 'l':
+            next_large = true;
             continue;
         case '<':
         case '>':
@@ -314,10 +323,21 @@ void light(cairo_t *cr, int x, int y, int size, const char *colors, long time) {
         case 'X':
             continue;
         }
-        margin(cr, x, y + size * n, size);
+        int this_size = size;
+        int this_x = x;
+        int y_offset = size * n + large_count * size / 2;
+        if (next_large) {
+            this_size = size * 3 / 2;
+            this_x = x - size / 4;
+            large_count++;
+        }
+
+        margin(cr, this_x, y + y_offset, this_size);
+        next_large = false;
         n++;
     }
-    doghouse_top = 0;
+    large_count = 0;
+    doghouse_top = -1;
     n = 0;
     x = original_x;
     for (const char *c = colors; *c; c++) {
@@ -337,18 +357,25 @@ void light(cairo_t *cr, int x, int y, int size, const char *colors, long time) {
             color = COLOR_OFF;
             break;
         case ':':
-            if (doghouse_top)
+            if (doghouse_top >= 0)
                 n = doghouse_top;
             else
                 doghouse_top = n;
             x = original_x - size / 2;
             continue;
         case ';':
-            if (doghouse_top)
+            if (doghouse_top >= 0)
                 n = doghouse_top;
             else
                 doghouse_top = n;
             x = original_x + size / 2;
+            continue;
+        case '.':
+            doghouse_top = -1;
+            x = original_x;
+            continue;
+        case 'l':
+            next_large = true;
             continue;
         case '<':
             next_lamp = LAMP_LARROW;
@@ -374,21 +401,22 @@ void light(cairo_t *cr, int x, int y, int size, const char *colors, long time) {
         default:
             printf("WARNING: '%c' is not a known lamp color\n", *c);
         }
-        switch (next_flash) {
-        case 0:
-            lamp(cr, x, y + size * n, size, color, next_lamp);
-            break;
-        case 1:
-            time % 2 == 0 ?
-                lamp(cr, x, y + size * n, size, color, next_lamp) :
-                lamp(cr, x, y + size * n, size, COLOR_OFF, next_lamp);
-            break;
-        case 2:
-            time % 2 == 1 ?
-                lamp(cr, x, y + size * n, size, color, next_lamp) :
-                lamp(cr, x, y + size * n, size, COLOR_OFF, next_lamp);
-            break;
+
+        int this_size = size;
+        int this_x = x;
+        int y_offset = size * n + large_count * size / 2;
+        if (next_large) {
+            this_size = size * 3 / 2;
+            this_x = x - size / 4;
+            large_count++;
         }
+
+        if (next_flash == 1 && time % 2 == 0) color = COLOR_OFF;
+        if (next_flash == 2 && time % 2 == 1) color = COLOR_OFF;
+
+        lamp(cr, this_x, y + y_offset, this_size, color, next_lamp);
+
+        next_large = false;
         next_flash = 0;
         next_lamp = LAMP_FULL;
         n++;
@@ -552,20 +580,25 @@ int by_name(const char *name) {
 
 void load_draw_instructions() {
     FILE *file = fopen("lightscene", "r");
-    char light_name[64];
+    char light_name[64], line[256];
     int x, y, size, offset;
     int i = 0;
 
-    while (!feof(file)) {
-        fscanf(file, "%s %i %i %i %i", light_name, &x, &y, &size, &offset);
+    while (fgets(line, sizeof(line), file)) {
+        if (line[0] == '#') continue;
+        if (line[0] == '\n') continue;
         instruction_count++;
     }
 
     instruction_array = calloc(instruction_count, sizeof(struct draw_instruction));
 
     rewind(file);
-    while (!feof(file)) {
-        fscanf(file, "%s %i %i %i %i", light_name, &x, &y, &size, &offset);
+    while (fgets(line, sizeof(line), file)) {
+        if (line[0] == '#') continue;
+        if (line[0] == '\n') continue;
+        if (sscanf(line, "%s %i %i %i %i", light_name, &x, &y, &size, &offset) != 5) {
+            printf("line '%s' is not in a correct format\n", line);
+        }
         instruction_array[i].light_id = by_name(light_name);
         instruction_array[i].x = x;
         instruction_array[i].y = y;
