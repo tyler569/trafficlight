@@ -167,6 +167,7 @@ enum lamp_type {
     LAMP_FARROW,
     LAMP_HORIZ,
     LAMP_VERT,
+    LAMP_X,
     LAMP_SQUARE,
     LAMP_DIAMOND,
 };
@@ -225,12 +226,25 @@ void lamp_bar(cairo_t *cr, double bar_width, int size) {
     cairo_stroke(cr);
 }
 
+void lamp_x(cairo_t *cr, double x_width, int size) {
+    cairo_set_line_width(cr, x_width);
+    cairo_move_to(cr, -size * 0.25, -size * 0.25);
+    cairo_line_to(cr, size * 0.25, size * 0.25);
+    cairo_stroke(cr);
+
+    cairo_set_line_width(cr, x_width);
+    cairo_move_to(cr, size * 0.25, -size * 0.25);
+    cairo_line_to(cr, -size * 0.25, size * 0.25);
+    cairo_stroke(cr);
+}
+
 void lamp(cairo_t *cr, int x, int y, int size, enum lamp_color color, enum lamp_type type) {
     cairo_rectangle(cr, x, y, size, size);
     set_color(cr, COLOR_BG);
     cairo_fill(cr);
     double arrow_width = size / 15.0;
     double bar_width = size / 8.0;
+    double x_width = size / 10.0;
 
     cairo_save(cr);
     cairo_translate(cr, x + size / 2, y + size / 2);
@@ -284,6 +298,14 @@ void lamp(cairo_t *cr, int x, int y, int size, enum lamp_color color, enum lamp_
         cairo_rotate(cr, M_PI/2);
         lamp_bar(cr, bar_width, size);
         break;
+    case LAMP_X:
+        set_color(cr, COLOR_OFF);
+        cairo_arc(cr, 0, 0, size * 0.4, 0, 2 * M_PI);
+        cairo_fill(cr);
+
+        set_color(cr, color);
+        lamp_x(cr, x_width, size);
+        break;
     case LAMP_SQUARE:
         set_color(cr, color);
         cairo_rectangle(cr, -size * 0.4, -size * 0.4, size * 0.8, size * 0.8);
@@ -335,10 +357,11 @@ void light(cairo_t *cr, int x, int y, int size, const char *colors, long time) {
         case '^':
         case '-':
         case '|':
+        case 'x':
         case 's':
         case 'd':
-        case 'x':
-        case 'X':
+        case 'f':
+        case 'F':
             continue;
         }
         int this_size = size;
@@ -413,20 +436,23 @@ void light(cairo_t *cr, int x, int y, int size, const char *colors, long time) {
         case '|':
             next_lamp = LAMP_VERT;
             continue;
+        case 'x':
+            next_lamp = LAMP_X;
+            continue;
         case 's':
             next_lamp = LAMP_SQUARE;
             continue;
         case 'd':
             next_lamp = LAMP_DIAMOND;
             continue;
-        case 'x':
+        case 'f':
             next_flash = 1;
             continue;
-        case 'X':
+        case 'F':
             next_flash = 2;
             continue;
         default:
-            printf("WARNING: '%c' is not a known lamp color\n", *c);
+            printf("WARNING: '%c' is not a known lamp color or modifier\n", *c);
         }
 
         int this_size = size;

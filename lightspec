@@ -4,13 +4,13 @@ simple_gyr 50
 25 r__
 
 flashing_amber 1
-0 _xy_
+0 _fy_
 
 flashing_red 1
-0 Xr__
+0 Fr__
 
 warning 2
-0 xyXy
+0 fyFy
 
 doghouse_early_left 50
 0  _:_<g;_g
@@ -45,16 +45,16 @@ stack_early_right 50
 45 r__>g
 
 yellow_left_turn 50
-0  __x<y
+0  __f<y
 20 _<y_
 25 <r__
 
 fun_times 1
-0 xy__Xy
+0 fy__Fy
 
 sf_muni 50
 0  _|w
-15 _x|w
+15 _f|w
 25 -r_
 
 british 50
@@ -66,11 +66,11 @@ british 50
 super_red 50
 0  :_;_._g
 20 :_;_.y_
-25 :xr;Xr.__
+25 :fr;Fr.__
 
 super_yellow 50
 0  _:_;_.g
-15 _:xy;Xy._
+15 _:fy;Fy._
 25 r:_;_._
 
 large_red 50
@@ -92,3 +92,7 @@ canadian_doghouse_right 50
 8  s_:d_g;__
 20 s_:dy_;__
 25 sr:d__;__
+
+sf_muni_station 60
+0  _|_xr
+30 w|yx_
