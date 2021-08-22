@@ -2,7 +2,7 @@ quebec 40 50 50 0
 doghouse_early_left -1 50 50 0
 stack_early_right -1 50 50 10
 yellow_left_turn -1 50 50 40
-doghouse_early_left -1 50 50 20
+canadian_doghouse_right -1 50 50 20
 stack_early_right -1 50 50 30
 
 fun_times 40 250 50 50

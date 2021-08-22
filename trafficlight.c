@@ -155,6 +155,7 @@ enum lamp_color {
     COLOR_RED,
     COLOR_AMBER,
     COLOR_GREEN,
+    COLOR_WHITE,
     COLOR_OFF,
 };
 
@@ -183,6 +184,9 @@ void set_color(cairo_t *cr, enum lamp_color color) {
         break;
     case COLOR_GREEN:
         cairo_set_source_rgba(cr, 0, 1, 0.8, 1);
+        break;
+    case COLOR_WHITE:
+        cairo_set_source_rgba(cr, 1, 1, 1, 1);
         break;
     case COLOR_OFF:
         cairo_set_source_rgba(cr, 0.1, 0.1, 0.1, 1);
@@ -277,6 +281,7 @@ void lamp(cairo_t *cr, int x, int y, int size, enum lamp_color color, enum lamp_
         cairo_fill(cr);
 
         set_color(cr, color);
+        cairo_rotate(cr, M_PI/2);
         lamp_bar(cr, bar_width, size);
         break;
     case LAMP_SQUARE:
@@ -365,6 +370,9 @@ void light(cairo_t *cr, int x, int y, int size, const char *colors, long time) {
             break;
         case 'g':
             color = COLOR_GREEN;
+            break;
+        case 'w':
+            color = COLOR_WHITE;
             break;
         case '_':
             color = COLOR_OFF;

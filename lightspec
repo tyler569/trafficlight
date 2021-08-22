@@ -53,8 +53,8 @@ fun_times 1
 0 xy__Xy
 
 sf_muni 50
-0  _|g
-15 _x|g
+0  _|w
+15 _x|w
 25 -r_
 
 british 50
@@ -85,3 +85,10 @@ quebec 50
 
 arrow_test 1
 0 <g^g>g
+
+canadian_doghouse_right 50
+0  s_:d_g;_>g
+5  s_:d_g;>y_
+8  s_:d_g;__
+20 s_:dy_;__
+25 sr:d__;__
