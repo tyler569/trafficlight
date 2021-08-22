@@ -8,6 +8,7 @@ bool done = false;
 void render_frame(cairo_t *cr, int frame);
 void load_light_specs(void);
 void load_draw_instructions(void);
+void light(cairo_t *cr, int x, int y, int size, const char *colors, long time);
 
 long nanosecond_now() {
     struct timespec now;
@@ -205,16 +206,15 @@ void margin(cairo_t *cr, int x, int y, int size) {
 }
 
 void lamp_left_arrow(cairo_t *cr, double arrow_width, int size) {
-    double dw = arrow_width / 3;
     cairo_set_line_width(cr, arrow_width);
     cairo_move_to(cr, -size * 0.1, 0);
     cairo_line_to(cr, size * 0.3, 0);
     cairo_stroke(cr);
-    cairo_move_to(cr, -size * 0.3 - dw, dw);
-    cairo_line_to(cr, 0, -size * 0.3);
-    cairo_stroke(cr);
-    cairo_move_to(cr, -size * 0.3 - dw, -dw);
+
+    cairo_move_to(cr, 0, -size * 0.3);
+    cairo_line_to(cr, -size * 0.3, 0);
     cairo_line_to(cr, 0, size * 0.3);
+
     cairo_stroke(cr);
 }
 
