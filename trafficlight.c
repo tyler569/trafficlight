@@ -3,6 +3,9 @@
 #include <SDL2/SDL.h>
 #include <cairo/cairo.h>
 
+int window_w = 640;
+int window_h = 480;
+
 bool done = false;
 
 void render_frame(cairo_t *cr, int frame);
@@ -34,8 +37,8 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char **argv) {
             "Traffic Light",
             SDL_WINDOWPOS_UNDEFINED,
             SDL_WINDOWPOS_UNDEFINED,
-            640,
-            480,
+            window_w,
+            window_h,
             SDL_WINDOW_SHOWN
     );
 
@@ -550,7 +553,7 @@ int instruction_count = 0;
 
 void render_frame(cairo_t *cr, [[maybe_unused]] int frame) {
     cairo_set_source_rgba(cr, 0.5, 0.5, 0.5, 1.0);
-    cairo_rectangle(cr, 0, 0, 640, 480);
+    cairo_rectangle(cr, 0, 0, window_w, window_h);
     cairo_fill(cr);
 
     int ms = millisecond_now();

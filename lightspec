@@ -12,6 +12,9 @@ flashing_red 1
 warning 2
 0 fyFy
 
+arrow_test 1
+0 <g^g>g
+
 doghouse_early_left 50
 0  _:_<g;_g
 5  _:<y_;_g
@@ -57,6 +60,10 @@ sf_muni 50
 15 _f|w
 25 -r_
 
+sf_muni_station 60
+0  _|_xr
+30 w|yx_
+
 british 50
 0  __g
 20 _y_
@@ -83,9 +90,6 @@ quebec 50
 20 s_dy_
 25 srd__
 
-arrow_test 1
-0 <g^g>g
-
 canadian_doghouse_right 50
 0  s_:d_g;_>g
 5  s_:d_g;>y_
@@ -93,6 +97,38 @@ canadian_doghouse_right 50
 20 s_:dy_;__
 25 sr:d__;__
 
-sf_muni_station 60
-0  _|_xr
-30 w|yx_
+full_stack 50
+0  __g____
+20 _y_____
+25 r______
+40 r__>_>g<_<g
+45 r__>y>_<y<_
+
+long_stack_left 50
+0  __g__
+20 _y___
+25 r____
+40 r___<g
+45 r__<y_
+
+long_stack_right 50
+0  __g__
+20 _y___
+25 r____
+40 r___>g
+45 r__>y_
+
+tram_doghouse 50
+0  r:__;-r_
+10 r:__;_|w
+25 _:_g;_|w
+40 _:_g;_f|w
+45 _:y_;_f|w
+
+double_red 50
+0  __g_
+20 _y__
+25 r__r
+
+impossible 3
+0 f>r__
