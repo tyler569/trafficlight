@@ -1,6 +1,6 @@
 #include <stdbool.h>
 #include <sys/time.h>
-#include <SDL2/SDL.h>
+#include <SDL.h>
 #include <cairo/cairo.h>
 
 int window_w = 640;
@@ -91,7 +91,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char **argv) {
 
     int frame = 0;
     long frame_start_ms;
-    int desired_frame_rate = 10;
+    int desired_frame_rate = 60;
     long desired_frame_duration = 1000 / desired_frame_rate;
     bool rctrl = false, lctrl = false;
     while (!done) {
@@ -324,7 +324,7 @@ void lamp(cairo_t *cr, int x, int y, int size, enum lamp_color color, enum lamp_
     cairo_restore(cr);
 }
 
-void light(cairo_t *cr, int x, int y, int size, const char *colors, long time) {
+void light(cairo_t *cr, int x, int y, int size, const char *colors, long ms) {
     int doghouse_top = -1;
     enum lamp_type next_lamp = LAMP_FULL;
     int n = 0;
@@ -467,8 +467,8 @@ void light(cairo_t *cr, int x, int y, int size, const char *colors, long time) {
             large_count++;
         }
 
-        if (next_flash == 1 && time % 2 == 0) color = COLOR_OFF;
-        if (next_flash == 2 && time % 2 == 1) color = COLOR_OFF;
+        if (next_flash == 1 && (ms / 1000) % 2 == 0) color = COLOR_OFF;
+        if (next_flash == 2 && (ms / 1000) % 2 == 1) color = COLOR_OFF;
 
         lamp(cr, this_x, y + y_offset, this_size, color, next_lamp);
 
@@ -525,10 +525,10 @@ void light_desc(
         int size,
         struct light_desc *desc,
         int offset,
-        long time
+        long ms
     ) {
-    struct light_stage *current_stage = stage(desc, offset, time);
-    light(cr, x, y, size, current_stage->state, time);
+    struct light_stage *current_stage = stage(desc, offset, ms/1000);
+    light(cr, x, y, size, current_stage->state, ms);
 }
 
 
@@ -557,12 +557,11 @@ void render_frame(cairo_t *cr, [[maybe_unused]] int frame) {
     cairo_fill(cr);
 
     int ms = millisecond_now();
-    int sec = ms / 1000;
 
     for (int i = 0; i < instruction_count; i++) {
         struct draw_instruction *instr = &instruction_array[i];
         struct light_desc *desc = spec_array[instr->light_id].desc;
-        light_desc(cr, instr->x, instr->y, instr->size, desc, instr->offset, sec);
+        light_desc(cr, instr->x, instr->y, instr->size, desc, instr->offset, ms);
     }
 }
 
@@ -658,6 +657,8 @@ void load_draw_instructions() {
         }
         if (x == -1) {
             x = last_x + last_size * 2;
+        } else if (x == -2) {
+            x = window_w / 2 - size / 2;
         }
         instruction_array[i].light_id = by_name(light_name);
         instruction_array[i].x = x;
