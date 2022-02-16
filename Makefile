@@ -1,2 +1,14 @@
-trafficlight: trafficlight.c
-	clang -std=c2x -Wall -Wextra trafficlight.c -o trafficlight -lsdl2 -lcairo
+CFLAGS := \
+	$(shell sdl2-config --cflags) \
+	$(shell pkg-config cairo --cflags) \
+	-Wall \
+	-Wextra \
+	-Wpedantic \
+	-std=c2x \
+	-fsanitize=address
+
+LDFLAGS := \
+	$(shell sdl2-config --libs) \
+	$(shell pkg-config cairo --libs)
+
+all: trafficlight
