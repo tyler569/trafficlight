@@ -556,7 +556,7 @@ void render_frame(cairo_t *cr, [[maybe_unused]] int frame) {
     cairo_rectangle(cr, 0, 0, window_w, window_h);
     cairo_fill(cr);
 
-    int ms = millisecond_now();
+    long ms = millisecond_now();
 
     for (int i = 0; i < instruction_count; i++) {
         struct draw_instruction *instr = &instruction_array[i];
