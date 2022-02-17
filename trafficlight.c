@@ -175,30 +175,48 @@ enum lamp_type {
     LAMP_DIAMOND,
 };
 
+enum lamp_shape {
+    LAMP_S_CIRCLE,
+    LAMP_S_SQUARE,
+    LAMP_S_DIAMOND,
+    LAMP_S_TRIANGLE,
+};
+
+enum lamp_symbol {
+    LAMP_Y_NONE,
+    LAMP_Y_LARROW,
+    LAMP_Y_RARROW,
+    LAMP_Y_UARROW,
+    LAMP_Y_HORIZ,
+    LAMP_Y_VERT,
+    LAMP_Y_X,
+    LAMP_Y_SQUARE,
+};
+
+
+struct saved_color {
+    double r, g, b;
+};
+
+struct saved_color colors[] = {
+    [COLOR_BG] = { 0, 0, 0 },
+    [COLOR_RED] = { 1, 0, 0 },
+    [COLOR_AMBER] = { 1, 0.8, 0 },
+    [COLOR_GREEN] = { 0, 1, 0.8 },
+    [COLOR_OFF] = { 0.1, 0.1, 0.1 },
+};
+
+void set_color_o(cairo_t *cr, enum lamp_color color, bool on) {
+    struct saved_color c = colors[color];
+    if (on) {
+        cairo_set_source_rgb(cr, c.r, c.g, c.b);
+    } else {
+        cairo_set_source_rgb(cr, c.r * 0.2, c.g * 0.2, c.b * 0.2);
+    }
+}
 
 void set_color(cairo_t *cr, enum lamp_color color) {
-    switch (color) {
-    case COLOR_BG:
-        cairo_set_source_rgba(cr, 0, 0, 0, 1);
-        break;
-    case COLOR_RED:
-        cairo_set_source_rgba(cr, 1, 0, 0, 1);
-        break;
-    case COLOR_AMBER:
-        cairo_set_source_rgba(cr, 1, 0.8, 0, 1);
-        break;
-    case COLOR_GREEN:
-        cairo_set_source_rgba(cr, 0, 1, 0.8, 1);
-        break;
-    case COLOR_WHITE:
-        cairo_set_source_rgba(cr, 1, 1, 1, 1);
-        break;
-    case COLOR_OFF:
-        cairo_set_source_rgba(cr, 0.1, 0.1, 0.1, 1);
-        break;
-    default:
-        cairo_set_source_rgba(cr, 1, 0, 1, 1);
-    }
+    set_color_o(cr, color, true);
 }
 
 void margin(cairo_t *cr, int x, int y, int size) {
