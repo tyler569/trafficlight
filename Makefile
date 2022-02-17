@@ -5,7 +5,8 @@ CFLAGS := \
 	-Wextra \
 	-Wpedantic \
 	-std=c2x \
-	-fsanitize=address
+	-fsanitize=address \
+	-g
 
 LDFLAGS := \
 	$(shell sdl2-config --libs) \
