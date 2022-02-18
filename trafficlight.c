@@ -8,10 +8,60 @@ int window_h = 480;
 
 bool done = false;
 
+enum lamp_color {
+    COLOR_UNSET,
+    COLOR_UNKNOWN,
+    COLOR_BG,
+    COLOR_RED,
+    COLOR_AMBER,
+    COLOR_GREEN,
+    COLOR_WHITE,
+    COLOR_OFF,
+};
+
+enum lamp_shape {
+    LAMP_S_CIRCLE,
+    LAMP_S_SQUARE,
+    LAMP_S_DIAMOND,
+    LAMP_S_TRIANGLE,
+};
+
+enum lamp_symbol {
+    LAMP_Y_NONE,
+    LAMP_Y_LARROW,
+    LAMP_Y_RARROW,
+    LAMP_Y_FARROW,
+    LAMP_Y_HORIZ,
+    LAMP_Y_VERT,
+    LAMP_Y_X,
+    LAMP_Y_SQUARE,
+};
+
+
+struct light_stage {
+    int time_offset;
+    char state[32];
+};
+
+struct lamp_info {
+    bool exists;
+    enum lamp_color color;
+    enum lamp_shape shape;
+    enum lamp_symbol symbol;
+};
+
+struct light_spec {
+    int loop_time;
+    int stage_count;
+    char name[64];
+    struct lamp_info lamps[32];
+    struct light_stage stages[32];
+};
+
 void render_frame(cairo_t *cr, int frame);
 void load_light_specs(void);
 void load_draw_instructions(void);
-void light(cairo_t *cr, int x, int y, int size, const char *colors, long time);
+void light(cairo_t *cr, int x, int y, int size, struct light_spec *spec, int stage_id, long time);
 
 long nanosecond_now() {
     struct timespec now;
@@ -154,59 +204,28 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char **argv) {
     return 0;
 }
 
-enum lamp_color {
-    COLOR_BG,
-    COLOR_RED,
-    COLOR_AMBER,
-    COLOR_GREEN,
-    COLOR_WHITE,
-    COLOR_OFF,
-};
-
-enum lamp_type {
-    LAMP_FULL,
-    LAMP_LARROW,
-    LAMP_RARROW,
-    LAMP_FARROW,
-    LAMP_HORIZ,
-    LAMP_VERT,
-    LAMP_X,
-    LAMP_SQUARE,
-    LAMP_DIAMOND,
-};
-
-enum lamp_shape {
-    LAMP_S_CIRCLE,
-    LAMP_S_SQUARE,
-    LAMP_S_DIAMOND,
-    LAMP_S_TRIANGLE,
-};
-
-enum lamp_symbol {
-    LAMP_Y_NONE,
-    LAMP_Y_LARROW,
-    LAMP_Y_RARROW,
-    LAMP_Y_UARROW,
-    LAMP_Y_HORIZ,
-    LAMP_Y_VERT,
-    LAMP_Y_X,
-    LAMP_Y_SQUARE,
-};
-
-
 struct saved_color {
     double r, g, b;
 };
 
 struct saved_color colors[] = {
+    [COLOR_UNSET] = { 1, 0, 1 },
+    [COLOR_UNKNOWN] = { 1, 0, 1 },
+
     [COLOR_BG] = { 0, 0, 0 },
     [COLOR_RED] = { 1, 0, 0 },
     [COLOR_AMBER] = { 1, 0.8, 0 },
     [COLOR_GREEN] = { 0, 1, 0.8 },
+    [COLOR_WHITE] = { 1, 1, 1 },
     [COLOR_OFF] = { 0.1, 0.1, 0.1 },
 };
 
 void set_color_o(cairo_t *cr, enum lamp_color color, bool on) {
+    if (color == COLOR_OFF) {
+        // don't make off darker
+        on = true;
+    }
+
     struct saved_color c = colors[color];
     if (on) {
         cairo_set_source_rgb(cr, c.r, c.g, c.b);
@@ -227,129 +246,149 @@ void margin(cairo_t *cr, int x, int y, int size) {
     cairo_fill(cr);
 }
 
-void lamp_left_arrow(cairo_t *cr, double arrow_width, int size) {
+void lamp_left_arrow(cairo_t *cr, double arrow_width) {
     cairo_set_line_width(cr, arrow_width);
-    cairo_move_to(cr, -size * 0.1, 0);
-    cairo_line_to(cr, size * 0.3, 0);
+    cairo_move_to(cr, -1 * 0.1, 0);
+    cairo_line_to(cr, 1 * 0.3, 0);
     cairo_stroke(cr);
 
-    cairo_move_to(cr, 0, -size * 0.3);
-    cairo_line_to(cr, -size * 0.3, 0);
-    cairo_line_to(cr, 0, size * 0.3);
+    cairo_move_to(cr, 0, -1 * 0.3);
+    cairo_line_to(cr, -1 * 0.3, 0);
+    cairo_line_to(cr, 0, 1 * 0.3);
 
     cairo_stroke(cr);
 }
 
-void lamp_bar(cairo_t *cr, double bar_width, int size) {
+void lamp_bar(cairo_t *cr, double bar_width) {
     cairo_set_line_width(cr, bar_width);
-    cairo_move_to(cr, -size * 0.3, 0);
-    cairo_line_to(cr, size * 0.3, 0);
+    cairo_move_to(cr, -1 * 0.3, 0);
+    cairo_line_to(cr, 1 * 0.3, 0);
     cairo_stroke(cr);
 }
 
-void lamp_x(cairo_t *cr, double x_width, int size) {
+void lamp_x(cairo_t *cr, double x_width) {
     cairo_set_line_width(cr, x_width);
-    cairo_move_to(cr, -size * 0.25, -size * 0.25);
-    cairo_line_to(cr, size * 0.25, size * 0.25);
-    cairo_stroke(cr);
-
-    cairo_set_line_width(cr, x_width);
-    cairo_move_to(cr, size * 0.25, -size * 0.25);
-    cairo_line_to(cr, -size * 0.25, size * 0.25);
+    cairo_move_to(cr, -1 * 0.25, -1 * 0.25);
+    cairo_line_to(cr, 1 * 0.25, 1 * 0.25);
+    cairo_move_to(cr, 1 * 0.25, -1 * 0.25);
+    cairo_line_to(cr, -1 * 0.25, 1 * 0.25);
     cairo_stroke(cr);
 }
 
-void lamp(cairo_t *cr, int x, int y, int size, enum lamp_color color, enum lamp_type type) {
+void lamp_square(cairo_t *cr) {
+    cairo_rectangle(cr, -0.25, -0.25, 0.5, 0.5);
+    cairo_fill(cr);
+}
+
+void lamp(
+        cairo_t *cr,
+        int x,
+        int y,
+        int size,
+        enum lamp_color color,
+        bool on,
+        enum lamp_shape shape,
+        enum lamp_symbol symbol
+) {
+    enum lamp_color fill_color = color;
+    double arrow_width = 1.0 / 15.0;
+    double bar_width = 1.0 / 8.0;
+    double x_width = 1.0 / 10.0;
+
     cairo_rectangle(cr, x, y, size, size);
     set_color(cr, COLOR_BG);
     cairo_fill(cr);
-    double arrow_width = size / 15.0;
-    double bar_width = size / 8.0;
-    double x_width = size / 10.0;
 
     cairo_save(cr);
     cairo_translate(cr, x + size / 2, y + size / 2);
+    cairo_scale(cr, size, size);
 
-    switch (type) {
-    case LAMP_FULL:
-        set_color(cr, color);
-        cairo_arc(cr, 0, 0, size * 0.4, 0, 2 * M_PI);
-        cairo_fill(cr);
-        break;
-    case LAMP_LARROW:
-        set_color(cr, COLOR_OFF);
-        cairo_arc(cr, 0, 0, size * 0.4, 0, 2 * M_PI);
-        cairo_fill(cr);
+    if (symbol != LAMP_Y_NONE) {
+        fill_color = COLOR_OFF;
+    }
 
-        set_color(cr, color);
-        lamp_left_arrow(cr, arrow_width, size);
-        break;
-    case LAMP_RARROW:
-        set_color(cr, COLOR_OFF);
-        cairo_arc(cr, 0, 0, size * 0.4, 0, 2 * M_PI);
-        cairo_fill(cr);
-
-        set_color(cr, color);
-        cairo_rotate(cr, M_PI);
-        lamp_left_arrow(cr, arrow_width, size);
-        break;
-    case LAMP_FARROW:
-        set_color(cr, COLOR_OFF);
-        cairo_arc(cr, 0, 0, size * 0.4, 0, 2 * M_PI);
-        cairo_fill(cr);
-
-        set_color(cr, color);
-        cairo_rotate(cr, M_PI/2);
-        lamp_left_arrow(cr, arrow_width, size);
-        break;
-    case LAMP_HORIZ:
-        set_color(cr, COLOR_OFF);
-        cairo_arc(cr, 0, 0, size * 0.4, 0, 2 * M_PI);
-        cairo_fill(cr);
-
-        set_color(cr, color);
-        lamp_bar(cr, bar_width, size);
-        break;
-    case LAMP_VERT:
-        set_color(cr, COLOR_OFF);
-        cairo_arc(cr, 0, 0, size * 0.4, 0, 2 * M_PI);
-        cairo_fill(cr);
-
-        set_color(cr, color);
-        cairo_rotate(cr, M_PI/2);
-        lamp_bar(cr, bar_width, size);
-        break;
-    case LAMP_X:
-        set_color(cr, COLOR_OFF);
-        cairo_arc(cr, 0, 0, size * 0.4, 0, 2 * M_PI);
-        cairo_fill(cr);
-
-        set_color(cr, color);
-        lamp_x(cr, x_width, size);
-        break;
-    case LAMP_SQUARE:
-        set_color(cr, color);
-        cairo_rectangle(cr, -size * 0.4, -size * 0.4, size * 0.8, size * 0.8);
+    switch (shape) {
+    case LAMP_S_CIRCLE:
+        set_color_o(cr, fill_color, on);
+        cairo_arc(cr, 0, 0, 1 * 0.4, 0, 2 * M_PI);
         cairo_fill(cr);
         break;
-    case LAMP_DIAMOND:
-        set_color(cr, color);
+    case LAMP_S_SQUARE:
+        set_color_o(cr, fill_color, on);
+        cairo_rectangle(cr, -1 * 0.4, -1 * 0.4, 1 * 0.8, 1 * 0.8);
+        cairo_fill(cr);
+        break;
+    case LAMP_S_DIAMOND:
+        set_color_o(cr, fill_color, on);
         cairo_rotate(cr, M_PI/4);
-        cairo_rectangle(cr, -size * 0.3, -size * 0.3, size * 0.6, size * 0.6);
+        cairo_rectangle(cr, -1 * 0.3, -1 * 0.3, 1 * 0.6, 1 * 0.6);
         cairo_fill(cr);
+        break;
+    case LAMP_S_TRIANGLE:
+        // TODO
+        break;
+    }
+
+    switch (symbol) {
+    case LAMP_Y_NONE:
+        break;
+    case LAMP_Y_LARROW:
+        set_color_o(cr, color, on);
+        lamp_left_arrow(cr, arrow_width);
+        break;
+    case LAMP_Y_RARROW:
+        set_color_o(cr, color, on);
+        cairo_rotate(cr, M_PI);
+        lamp_left_arrow(cr, arrow_width);
+        break;
+    case LAMP_Y_FARROW:
+        set_color_o(cr, color, on);
+        cairo_rotate(cr, M_PI/2);
+        lamp_left_arrow(cr, arrow_width);
+        break;
+    case LAMP_Y_HORIZ:
+        set_color_o(cr, color, on);
+        lamp_bar(cr, bar_width);
+        break;
+    case LAMP_Y_VERT:
+        set_color_o(cr, color, on);
+        cairo_rotate(cr, M_PI/2);
+        lamp_bar(cr, bar_width);
+        break;
+    case LAMP_Y_X:
+        set_color_o(cr, color, on);
+        lamp_x(cr, x_width);
+        break;
+    case LAMP_Y_SQUARE:
+        set_color_o(cr, color, on);
+        lamp_square(cr);
         break;
     }
     cairo_restore(cr);
 }
 
-void light(cairo_t *cr, int x, int y, int size, const char *colors, long ms) {
+void light(
+        cairo_t *cr,
+        int x,
+        int y,
+        int size,
+        struct light_spec *spec,
+        int stage_id,
+        long time
+) {
     int doghouse_top = -1;
-    enum lamp_type next_lamp = LAMP_FULL;
+
+    enum lamp_shape shape = LAMP_S_CIRCLE;
+    enum lamp_symbol symbol = LAMP_Y_NONE;
+
+    int lamp_id = 0;
     int n = 0;
     int original_x = x;
     int next_flash = 0;
     bool next_large = false;
     int large_count = 0;
+    const char *colors = spec->stages[stage_id].state;
+
     for (const char *c = colors; *c; c++) {
         switch (*c) {
         case ':':
@@ -443,28 +482,28 @@ void light(cairo_t *cr, int x, int y, int size, const char *colors, long ms) {
             next_large = true;
             continue;
         case '<':
-            next_lamp = LAMP_LARROW;
+            symbol = LAMP_Y_LARROW;
             continue;
         case '>':
-            next_lamp = LAMP_RARROW;
+            symbol = LAMP_Y_RARROW;
             continue;
         case '^':
-            next_lamp = LAMP_FARROW;
+            symbol = LAMP_Y_FARROW;
             continue;
         case '-':
-            next_lamp = LAMP_HORIZ;
+            symbol = LAMP_Y_HORIZ;
             continue;
         case '|':
-            next_lamp = LAMP_VERT;
+            symbol = LAMP_Y_VERT;
             continue;
         case 'x':
-            next_lamp = LAMP_X;
+            symbol = LAMP_Y_X;
             continue;
         case 's':
-            next_lamp = LAMP_SQUARE;
+            shape = LAMP_S_SQUARE;
             continue;
         case 'd':
-            next_lamp = LAMP_DIAMOND;
+            shape = LAMP_S_DIAMOND;
             continue;
         case 'f':
             next_flash = 1;
@@ -485,44 +524,59 @@ void light(cairo_t *cr, int x, int y, int size, const char *colors, long ms) {
             large_count++;
         }
 
-        if (next_flash == 1 && (ms / 1000) % 2 == 0) color = COLOR_OFF;
-        if (next_flash == 2 && (ms / 1000) % 2 == 1) color = COLOR_OFF;
+        if (next_flash == 1 && (time / 1000) % 2 == 0) color = COLOR_OFF;
+        if (next_flash == 2 && (time / 1000) % 2 == 1) color = COLOR_OFF;
 
-        lamp(cr, this_x, y + y_offset, this_size, color, next_lamp);
+        bool on = true;
+
+        if (spec->lamps[lamp_id].exists) {
+            if (color == COLOR_OFF) {
+                color = spec->lamps[lamp_id].color;
+                shape = spec->lamps[lamp_id].shape;
+                symbol = spec->lamps[lamp_id].symbol;
+                on = false;
+            }
+        }
+
+        lamp(cr, this_x, y + y_offset, this_size, color, on, shape, symbol);
 
         next_large = false;
         next_flash = 0;
-        next_lamp = LAMP_FULL;
+        shape = LAMP_S_CIRCLE;
+        symbol = LAMP_Y_NONE;
+        lamp_id++;
         n++;
     }
 }
 
 
-struct light_stage {
-    int time_offset;
-    char state[32];
-};
 
-struct light_desc {
-    int loop_time;
-    struct light_stage stages[];
-};
+void print_light_spec(struct light_spec *spec) {
+    printf("light_spec {\n");
+    printf("\t.loop_time = %i,\n", spec->loop_time);
+    printf("\t.stage_count = %i,\n", spec->stage_count);
+    printf("\t.name = \"%s\",\n", spec->name);
 
+    printf("\t.lamps = {\n");
+    for (struct lamp_info *lamp = spec->lamps; lamp->exists; lamp++) {
+        printf("\t\t{ .color = %i, .shape = %i, .symbol = %i },\n",
+                lamp->color, lamp->shape, lamp->symbol);
+    }
+    printf("\t},\n");
 
-void print_light_desc(struct light_desc *desc) {
-    printf("light_desc {\n\t.loop_time = %i,\n\t.stages = {\n", desc->loop_time);
-    for (struct light_stage *stage = desc->stages; stage->state[0]; stage++) {
+    printf("\t.stages = {\n");
+    for (struct light_stage *stage = spec->stages; stage->state[0]; stage++) {
         printf("\t\t{ .time_offset = %i, .state = \"%s\" },\n",
                 stage->time_offset, stage->state);
     }
-    printf("\t}\n");
+    printf("\t},\n");
     printf("}\n");
 }
 
 
-struct light_stage *stage(struct light_desc *desc, int offset, long time) {
-    long loop_time = (time + offset) % desc->loop_time;
-    for (struct light_stage *stage = desc->stages; stage->state[0]; stage++) {
+struct light_stage *stage(struct light_spec *spec, int offset, long time) {
+    long loop_time = (time + offset) % spec->loop_time;
+    for (struct light_stage *stage = spec->stages; stage->state[0]; stage++) {
         if (
                 loop_time >= stage[0].time_offset &&
                 ( loop_time < stage[1].time_offset ||
@@ -532,29 +586,38 @@ struct light_stage *stage(struct light_desc *desc, int offset, long time) {
         }
     }
     printf("WARNING: no valid state found for light at time %i\n", offset);
-    print_light_desc(desc);
+    print_light_spec(spec);
     return &(struct light_stage){ .state = "" };
 }
 
-void light_desc(
+int stage_id(struct light_spec *spec, int offset, long time) {
+    long loop_time = (time + offset) % spec->loop_time;
+    for (struct light_stage *stage = spec->stages; stage->state[0]; stage++) {
+        if (
+                loop_time >= stage[0].time_offset &&
+                ( loop_time < stage[1].time_offset ||
+                  stage[1].time_offset == 0 )
+        ) {
+            return stage - spec->stages;
+        }
+    }
+    printf("WARNING: no valid state found for light at time %i\n", offset);
+    print_light_spec(spec);
+    return -1;
+}
+
+void draw_light_spec(
         cairo_t *cr,
         int x,
         int y,
         int size,
-        struct light_desc *desc,
+        struct light_spec *spec,
         int offset,
         long ms
     ) {
-    struct light_stage *current_stage = stage(desc, offset, ms/1000);
-    light(cr, x, y, size, current_stage->state, ms);
+    int current_stage = stage_id(spec, offset, ms/1000);
+    light(cr, x, y, size, spec, current_stage, ms);
 }
-
-
-struct light_spec {
-    char name[64];
-    int stage_count;
-    struct light_desc *desc;
-};
 
 struct draw_instruction {
     int light_id;
@@ -578,17 +641,112 @@ void render_frame(cairo_t *cr, [[maybe_unused]] int frame) {
 
     for (int i = 0; i < instruction_count; i++) {
         struct draw_instruction *instr = &instruction_array[i];
-        struct light_desc *desc = spec_array[instr->light_id].desc;
-        light_desc(cr, instr->x, instr->y, instr->size, desc, instr->offset, ms);
+        struct light_spec *spec = spec_array + instr->light_id;
+        draw_light_spec(
+                cr,
+                instr->x,
+                instr->y,
+                instr->size,
+                spec,
+                instr->offset,
+                ms
+        );
+    }
+}
+
+
+void fill_lamps(struct light_spec *spec) {
+    struct lamp_info *lamps = spec->lamps;
+
+    for (struct light_stage *stage = spec->stages; stage->state[0]; stage++) {
+        enum lamp_color color = COLOR_OFF;
+        enum lamp_shape shape = LAMP_S_CIRCLE;
+        enum lamp_symbol symbol = LAMP_Y_NONE;
+
+        int lamp_id = 0;
+
+        for (const char *c = stage->state; *c; c++) {
+            switch (*c) {
+            case 'r': 
+                color = COLOR_RED;
+                break;
+            case 'y':
+            case 'a':
+                color = COLOR_AMBER;
+                break;
+            case 'g':
+                color = COLOR_GREEN;
+                break;
+            case 'w':
+                color = COLOR_WHITE;
+                break;
+            case '_':
+                color = COLOR_OFF;
+                break;
+            case '<':
+                symbol = LAMP_Y_LARROW;
+                continue;
+            case '>':
+                symbol = LAMP_Y_RARROW;
+                continue;
+            case '^':
+                symbol = LAMP_Y_FARROW;
+                continue;
+            case '-':
+                symbol = LAMP_Y_HORIZ;
+                continue;
+            case '|':
+                symbol = LAMP_Y_VERT;
+                continue;
+            case 'x':
+                symbol = LAMP_Y_X;
+                continue;
+            case 's':
+                shape = LAMP_S_SQUARE;
+                continue;
+            case 'd':
+                shape = LAMP_S_DIAMOND;
+                continue;
+            default:
+                continue;
+            }
+
+            if (color == COLOR_OFF) {
+                goto next;
+            }
+
+            if (!lamps[lamp_id].exists) {
+                lamps[lamp_id].color = color;
+                lamps[lamp_id].shape = shape;
+                lamps[lamp_id].symbol = symbol;
+                lamps[lamp_id].exists = true;
+            } else {
+                if (lamps[lamp_id].color != color) {
+                    lamps[lamp_id].color = COLOR_WHITE;
+                }
+                if (lamps[lamp_id].symbol != symbol) {
+                    lamps[lamp_id].symbol = LAMP_Y_NONE;
+                }
+                if (lamps[lamp_id].shape != shape) {
+                    printf("WARNING: lamp %i in '%s' changes shape!\n",
+                            lamp_id, spec->name);
+                }
+            }
+
+next:
+            color = COLOR_OFF;
+            shape = LAMP_S_CIRCLE;
+            symbol = LAMP_Y_NONE;
+            lamp_id++;
+        }
     }
 }
 
 
 void load_light_specs() {
-    int spec_id = -1;
     int stage_id = 0;
     char a[256], b[256], *end;
-    struct light_desc *desc;
+    struct light_spec *spec;
     FILE *file = fopen("lightspec", "r");
 
     while (!feof(file)) {
@@ -600,44 +758,28 @@ void load_light_specs() {
     }
 
     spec_array = calloc(spec_count, sizeof(struct light_spec));
-
+    spec = &spec_array[-1];
     rewind(file);
-    while (!feof(file)) {
-        fscanf(file, "%s %s", a, b);
-        strtol(a, &end, 10);
-        if (*end) {
-            spec_id++;
-        } else {
-            spec_array[spec_id].stage_count++;
-        }
-    }
 
-    rewind(file);
-    spec_id = -1;
     while (!feof(file)) {
         fscanf(file, "%s %s", a, b);
         int time = strtol(a, &end, 10);
         if (*end) {
-            spec_id++;
-            desc = calloc(1,
-                    sizeof(struct light_desc) +
-                    sizeof(struct light_stage) * (
-                        spec_array[spec_id].stage_count + 1
-                    )
-            );
-            spec_array[spec_id].desc = desc;
-            strcpy(spec_array[spec_id].name, a);
-            desc->loop_time = strtol(b, NULL, 10);
+            spec++;
+            strcpy(spec->name, a);
+            spec->loop_time = strtol(b, NULL, 10);
+            spec->stage_count = stage_id;
             stage_id = 0;
         } else {
-            desc->stages[stage_id].time_offset = time;
-            strcpy(desc->stages[stage_id].state, b);
+            spec->stages[stage_id].time_offset = time;
+            strcpy(spec->stages[stage_id].state, b);
             stage_id++;
         }
     }
 
     for (int i = 0; i < spec_count; i++) {
-        print_light_desc(spec_array[i].desc);
+        fill_lamps(&spec_array[i]);
+        print_light_spec(&spec_array[i]);
     }
 }
 
