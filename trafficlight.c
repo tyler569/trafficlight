@@ -1,4 +1,5 @@
 #include <stdbool.h>
+#include <string.h>
 #include <sys/time.h>
 #include <SDL.h>
 #include <cairo/cairo.h>
@@ -53,6 +54,7 @@ struct lamp_info {
 struct light_spec {
     int loop_time;
     int stage_count;
+    bool rtl;
     char name[64];
     struct lamp_info lamps[32];
     struct light_stage stages[32];
@@ -626,7 +628,6 @@ struct draw_instruction {
     int offset;
 };
 
-
 struct light_spec *spec_array;
 int spec_count = 0;
 struct draw_instruction *instruction_array;
@@ -745,14 +746,16 @@ next:
 
 void load_light_specs() {
     int stage_id = 0;
-    char a[256], b[256], *end;
+    char line[256];
     struct light_spec *spec;
     FILE *file = fopen("lightspec", "r");
 
     while (!feof(file)) {
-        fscanf(file, "%s %s", a, b);
-        strtol(a, &end, 10);
-        if (*end) {
+        fgets(line, 256, file);
+        if (line[0] == '\n' || line[0] == '#') {
+            continue;
+        }
+        if (!isdigit(line[0])) {
             spec_count++;
         }
     }
@@ -762,18 +765,23 @@ void load_light_specs() {
     rewind(file);
 
     while (!feof(file)) {
-        fscanf(file, "%s %s", a, b);
-        int time = strtol(a, &end, 10);
-        if (*end) {
+        fgets(line, 256, file);
+        if (line[0] == '\n' || line[0] == '#') {
+            continue;
+        }
+        if (!isdigit(line[0])) {
             spec++;
-            strcpy(spec->name, a);
-            spec->loop_time = strtol(b, NULL, 10);
-            spec->stage_count = stage_id;
+            sscanf(line, "%s %i", spec->name, &spec->loop_time);
             stage_id = 0;
         } else {
-            spec->stages[stage_id].time_offset = time;
-            strcpy(spec->stages[stage_id].state, b);
+            sscanf(
+                    line,
+                    "%i %s",
+                    &spec->stages[stage_id].time_offset,
+                    spec->stages[stage_id].state
+            );
             stage_id++;
+            spec->stage_count++;
         }
     }
 
