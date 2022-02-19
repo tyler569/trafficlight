@@ -18,6 +18,7 @@ enum lamp_color {
     COLOR_GREEN,
     COLOR_WHITE,
     COLOR_OFF,
+    COLOR_DONT_PRINT,
 };
 
 enum lamp_shape {
@@ -282,6 +283,18 @@ void lamp_square(cairo_t *cr) {
     cairo_fill(cr);
 }
 
+void error_once(int c) {
+    static char shown[256] = {0};
+    if (!shown[c]) {
+        fprintf(
+                stderr,
+                "WARNING: '%c' is not a known lamp color or modifier\n",
+                c
+        );
+        shown[c] = 1;
+    }
+}
+
 void lamp(
         cairo_t *cr,
         int x,
@@ -391,6 +404,14 @@ void light(
     int large_count = 0;
     const char *colors = spec->stages[stage_id].state;
 
+    cairo_save(cr);
+
+    if (spec->rtl) {
+        cairo_translate(cr, x + size/2, y + size/2);
+        cairo_rotate(cr, 3 * M_PI / 2);
+        cairo_translate(cr, -(x + size/2), -(y + size/2));
+    }
+
     for (const char *c = colors; *c; c++) {
         switch (*c) {
         case ':':
@@ -425,6 +446,8 @@ void light(
         case 'f':
         case 'F':
             continue;
+        default:
+            break;
         }
         int this_size = size;
         int this_x = x;
@@ -461,6 +484,9 @@ void light(
             break;
         case '_':
             color = COLOR_OFF;
+            break;
+        case '#':
+            color = COLOR_DONT_PRINT;
             break;
         case ':':
             if (doghouse_top >= 0)
@@ -514,7 +540,7 @@ void light(
             next_flash = 2;
             continue;
         default:
-            printf("WARNING: '%c' is not a known lamp color or modifier\n", *c);
+            error_once(*c);
         }
 
         int this_size = size;
@@ -526,8 +552,8 @@ void light(
             large_count++;
         }
 
-        if (next_flash == 1 && (time / 1000) % 2 == 0) color = COLOR_OFF;
-        if (next_flash == 2 && (time / 1000) % 2 == 1) color = COLOR_OFF;
+        if (next_flash == 1 && (time / 750) % 2 == 0) color = COLOR_OFF;
+        if (next_flash == 2 && (time / 750) % 2 == 1) color = COLOR_OFF;
 
         bool on = true;
 
@@ -540,7 +566,9 @@ void light(
             }
         }
 
-        lamp(cr, this_x, y + y_offset, this_size, color, on, shape, symbol);
+        if (color != COLOR_DONT_PRINT) {
+            lamp(cr, this_x, y + y_offset, this_size, color, on, shape, symbol);
+        }
 
         next_large = false;
         next_flash = 0;
@@ -549,6 +577,8 @@ void light(
         lamp_id++;
         n++;
     }
+
+    cairo_restore(cr);
 }
 
 
@@ -558,6 +588,7 @@ void print_light_spec(struct light_spec *spec) {
     printf("\t.loop_time = %i,\n", spec->loop_time);
     printf("\t.stage_count = %i,\n", spec->stage_count);
     printf("\t.name = \"%s\",\n", spec->name);
+    printf("\t.rtl = %s,\n", spec->rtl ? "true" : "false");
 
     printf("\t.lamps = {\n");
     for (struct lamp_info *lamp = spec->lamps; lamp->exists; lamp++) {
@@ -770,8 +801,12 @@ void load_light_specs() {
             continue;
         }
         if (!isdigit(line[0])) {
+            char rtl[64];
             spec++;
-            sscanf(line, "%s %i", spec->name, &spec->loop_time);
+            int n = sscanf(line, "%s %i %s", spec->name, &spec->loop_time, rtl);
+            if (n > 2 && strcmp(rtl, "rtl") == 0) {
+                spec->rtl = true;
+            }
             stage_id = 0;
         } else {
             sscanf(
@@ -787,7 +822,7 @@ void load_light_specs() {
 
     for (int i = 0; i < spec_count; i++) {
         fill_lamps(&spec_array[i]);
-        print_light_spec(&spec_array[i]);
+        // print_light_spec(&spec_array[i]);
     }
 }
 
@@ -845,4 +880,15 @@ void load_draw_instructions() {
                 instr->light_id, instr->x, instr->y, instr->size, instr->offset);
     }
     printf("}\n");
+
+    printf("lights in use:\n");
+    long light_printed = 0;
+    for (int i = 0; i < instruction_count; i++) {
+        int light_id = instruction_array[i].light_id;
+        if ((light_printed & (1 << light_id)) == 0) {
+            printf("id %i: ", light_id);
+            print_light_spec(&spec_array[light_id]);
+            light_printed |= 1 << light_id;
+        }
+    }
 }
