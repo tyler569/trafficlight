@@ -715,6 +715,9 @@ void fill_lamps(struct light_spec *spec) {
             case '_':
                 color = COLOR_OFF;
                 break;
+            case '#':
+                color = COLOR_DONT_PRINT;
+                break;
             case '<':
                 symbol = LAMP_Y_LARROW;
                 continue;
