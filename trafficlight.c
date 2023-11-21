@@ -2,7 +2,7 @@
 #include <string.h>
 #include <sys/time.h>
 #include <SDL.h>
-#include <cairo/cairo.h>
+#include <cairo.h>
 
 int window_w = 640;
 int window_h = 480;
@@ -253,7 +253,6 @@ void lamp_left_arrow(cairo_t *cr, double arrow_width) {
     cairo_set_line_width(cr, arrow_width);
     cairo_move_to(cr, -1 * 0.1, 0);
     cairo_line_to(cr, 1 * 0.3, 0);
-    cairo_stroke(cr);
 
     cairo_move_to(cr, 0, -1 * 0.3);
     cairo_line_to(cr, -1 * 0.3, 0);
