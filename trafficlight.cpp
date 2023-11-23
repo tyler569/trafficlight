@@ -212,15 +212,15 @@ struct saved_color {
 };
 
 struct saved_color colors[] = {
-    [COLOR_UNSET] = { 1, 0, 1 },
-    [COLOR_UNKNOWN] = { 1, 0, 1 },
+    { 1, 0, 1 },
+    { 1, 0, 1 },
 
-    [COLOR_BG] = { 0, 0, 0 },
-    [COLOR_RED] = { 1, 0, 0 },
-    [COLOR_AMBER] = { 1, 0.8, 0 },
-    [COLOR_GREEN] = { 0, 1, 0.8 },
-    [COLOR_WHITE] = { 1, 1, 1 },
-    [COLOR_OFF] = { 0.1, 0.1, 0.1 },
+    { 0, 0, 0 },
+    { 1, 0, 0 },
+    { 1, 0.8, 0 },
+    { 0, 1, 0.8 },
+    { 1, 1, 1 },
+    { 0.1, 0.1, 0.1 },
 };
 
 void set_color_o(cairo_t *cr, enum lamp_color color, bool on) {
@@ -566,7 +566,7 @@ void light(
         }
 
         if (color != COLOR_DONT_PRINT) {
-            lamp(cr, this_x, y + y_offset, this_size, color, on, shape, symbol);
+            lamp(cr, this_x, y + y_offset, this_size, static_cast<lamp_color>(color), on, shape, symbol);
         }
 
         next_large = false;
@@ -606,6 +606,8 @@ void print_light_spec(struct light_spec *spec) {
 }
 
 
+static struct light_stage empty_stage = { .state = "" };
+
 struct light_stage *stage(struct light_spec *spec, int offset, long time) {
     long loop_time = (time + offset) % spec->loop_time;
     for (struct light_stage *stage = spec->stages; stage->state[0]; stage++) {
@@ -619,7 +621,7 @@ struct light_stage *stage(struct light_spec *spec, int offset, long time) {
     }
     printf("WARNING: no valid state found for light at time %i\n", offset);
     print_light_spec(spec);
-    return &(struct light_stage){ .state = "" };
+    return &empty_stage;
 }
 
 int stage_id(struct light_spec *spec, int offset, long time) {
@@ -793,7 +795,7 @@ void load_light_specs() {
         }
     }
 
-    spec_array = calloc(spec_count, sizeof(struct light_spec));
+    spec_array = (struct light_spec *)calloc(spec_count, sizeof(struct light_spec));
     spec = &spec_array[-1];
     rewind(file);
 
@@ -851,7 +853,7 @@ void load_draw_instructions() {
         instruction_count++;
     }
 
-    instruction_array = calloc(instruction_count, sizeof(struct draw_instruction));
+    instruction_array = (struct draw_instruction *)calloc(instruction_count, sizeof(struct draw_instruction));
 
     rewind(file);
     while (fgets(line, sizeof(line), file)) {
