@@ -783,6 +783,11 @@ void load_light_specs() {
     struct light_spec *spec;
     FILE *file = fopen("lightspec", "r");
 
+    if (!file) {
+        printf("ERROR: could not open lightspec\n");
+        exit(1);
+    }
+
     while (!feof(file)) {
         fgets(line, 256, file);
         if (line[0] == '\n' || line[0] == '#') {
@@ -844,6 +849,11 @@ void load_draw_instructions() {
     int x, y, size, offset;
     int last_x, last_size = 0;
     int i = 0;
+
+    if (!file) {
+        printf("ERROR: could not open lightscene\n");
+        exit(1);
+    }
 
     while (fgets(line, sizeof(line), file)) {
         if (line[0] == '#') continue;
