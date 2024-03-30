@@ -84,7 +84,6 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char **argv) {
     SDL_RenderClear(renderer);
     SDL_Texture *texture;
 
-
     int frame = 0;
     long frame_start_ms;
     int desired_frame_rate = 60;
@@ -150,21 +149,6 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char **argv) {
     return 0;
 }
 
-struct light_stage *stage(struct light_spec *spec, int offset, long time) {
-    long loop_time = (time + offset) % spec->loop_time;
-    for (struct light_stage *stage = spec->stages; stage->state[0]; stage++) {
-        if (
-                loop_time >= stage[0].time_offset &&
-                ( loop_time < stage[1].time_offset ||
-                  stage[1].time_offset == 0 )
-        ) {
-            return stage;
-        }
-    }
-    printf("WARNING: no valid state found for light at time %i\n", offset);
-    return &(struct light_stage){ .state = "" };
-}
-
 int stage_id(struct light_spec *spec, int offset, long time) {
     long loop_time = (time + offset) % spec->loop_time;
     for (struct light_stage *stage = spec->stages; stage->state[0]; stage++) {
@@ -193,13 +177,6 @@ void draw_light_spec(
     light(cr, x, y, size, spec, current_stage, ms);
 }
 
-struct draw_instruction {
-    int light_id;
-    int x, y;
-    int size;
-    int offset;
-};
-
 struct light_spec left_arrow = {
     .loop_time = 50,
     .layout = "<r<y<g",
@@ -207,17 +184,41 @@ struct light_spec left_arrow = {
         { 0, "__#" },
         { 20, "_#_" },
         { 25, "#__" },
-        { 45, "#F_" },
+        { 0, nullptr }
+    },
+};
+
+struct light_spec right_arrow = {
+    .loop_time = 50,
+    .layout = "ryg>g",
+    .stages = {
+        { 0, "__##" },
+        { 5, "__#y" },
+        { 10, "__#_" },
+        { 20, "_#__" },
+        { 25, "#___" },
+        { 0, nullptr }
+    },
+};
+
+struct light_spec muni = {
+    .loop_time = 50,
+    .layout = "w|yxr",
+    .stages = {
+        { 0, "__#" },
+        { 20, "##_" },
         { 0, nullptr }
     },
 };
 
 void render_frame(cairo_t *cr, [[maybe_unused]] int frame) {
-    cairo_set_source_rgba(cr, 0.5, 0.5, 0.5, 1.0);
+    cairo_set_source_rgba(cr, 0.1, 0.2, 0.3, 1.0);
     cairo_rectangle(cr, 0, 0, window_w, window_h);
     cairo_fill(cr);
 
     long ms = millisecond_now();
 
     draw_light_spec(cr, 50, 50, 100, &left_arrow, 0, ms);
+    draw_light_spec(cr, 200, 50, 100, &right_arrow, 0, ms);
+    draw_light_spec(cr, 350, 50, 100, &muni, 0, ms);
 }

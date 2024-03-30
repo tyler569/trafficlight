@@ -67,20 +67,20 @@ void lamp_bar(cairo_t *cr, double bar_width) {
 
 void lamp_x(cairo_t *cr, double x_width) {
     cairo_set_line_width(cr, x_width);
-    cairo_move_to(cr, -1 * 0.25, -1 * 0.25);
-    cairo_line_to(cr, 1 * 0.25, 1 * 0.25);
-    cairo_move_to(cr, 1 * 0.25, -1 * 0.25);
-    cairo_line_to(cr, -1 * 0.25, 1 * 0.25);
+    cairo_move_to(cr, -1 * 0.22, -1 * 0.22);
+    cairo_line_to(cr, 1 * 0.22, 1 * 0.22);
+    cairo_move_to(cr, 1 * 0.22, -1 * 0.22);
+    cairo_line_to(cr, -1 * 0.22, 1 * 0.22);
     cairo_stroke(cr);
 }
 
 void lamp_square(cairo_t *cr) {
-    cairo_rectangle(cr, -0.25, -0.25, 0.5, 0.5);
+    cairo_rectangle(cr, -0.22, -0.22, 0.5, 0.5);
     cairo_fill(cr);
 }
 
 void error_once(int c) {
-    static char shown[256] = {0};
+    static char shown[226] = {0};
     if (!shown[c]) {
         fprintf(
                 stderr,
@@ -369,7 +369,6 @@ void light(
             on = false;
             break;
         case '#':
-            on = true;
             break;
         case 'f':
             next_flash = 1;
