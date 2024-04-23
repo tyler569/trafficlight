@@ -1,0 +1,10 @@
+BasedOnStyle: WebKit
+
+ColumnLimit: 80
+PointerAlignment: Right
+AlignEscapedNewlines: DontAlign
+BreakBeforeBraces: Attach
+
+UseTab: AlignWithSpaces
+IndentWidth: 4
+TabWidth: 4
